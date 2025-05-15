@@ -1,3 +1,6 @@
+type Customer = any
+type Vehicle = any
+
 import React from 'react'
 import { ColumnDef } from '@tanstack/react-table'
 import DataTable from '../../components/DataTable'

@@ -1,4 +1,6 @@
 // --- START OF FILE dataSlice.ts ---
+type Customer = any
+type Vehicle = any
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
 // customersData ve vehiclesData'nın düzgün import edildiğini varsayıyoruz
