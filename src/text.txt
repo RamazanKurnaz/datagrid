@@ -1,0 +1,297 @@
+Modal her sayfada doğru formla açılır: Evet, her sayfada "Ekle" butonuna tıklayınca o sayfaya özel modal açılır, ancak her sayfa için form tanımlarını eklemeniz gerekir.
+Değişiklik yapmadan kullanım: Evet, modalı her sayfada değiştirmeden kullanabilirsiniz, sadece form alanlarını merkezi bir harita üzerinden tanımlamanız yeterli.
+Örnekler: "Müşteri" sayfasında müşteri ekleme formu, "Satıcılar" sayfasında satıcı ekleme formu, "İletişim" sayfasında iletişim ekleme formu açılır.
+Modal Yapısı
+Modal, Redux ile global olarak yönetilir ve her sayfada dinamik olarak doğru formu gösterir. "Ekle" butonuna tıklayınca, sayfanın türüne göre (örneğin, "Müşteri" veya "Araçlar") uygun form açılır. Bu, her sayfada ayrı kod yazmadan, merkezi bir yapı ile sağlanır.
+
+Form Yönetimi
+Formlar, React Hook Form ile yönetilir, bu da doğrulama ve kaydetme işlemlerini kolaylaştırır. Her sayfa için form alanları (örneğin, ad, e-posta) ikonlarla birlikte tanımlanır ve modal bu alanları dinamik olarak render eder.
+
+Beklenmedik Detay
+Modal, her sayfada düzenleme modunda da çalışır; bir tablo satırına tıklayınca, ilgili verilerle dolu olarak açılır, bu da kullanıcı deneyimini artırır.
+
+Rapor Notu
+Bu rapor, React, Typescript, Tailwind CSS ve Tanstack React Table ile yazılmış bir projeye modal bileşeni ekleme talebini ele almak için hazırlanmıştır. Kullanıcı, 50 sayfalık bir projede, her sayfada "Ekle" butonuna tıklayınca o sayfaya özel bir modalın açılmasını ve modalın her sayfada değişiklik yapmadan kullanılmasını istemiştir. Örneğin, "Müşteri" sayfasında müşteri ekleme formu, "Satıcılar" sayfasında satıcı ekleme formu, "İletişim" sayfasında iletişim ekleme formu açılmalıdır. Mevcut yapıyı analiz ettikten sonra, bu talebi karşılamak için gerekli adımları detaylı bir şekilde sunuyoruz.
+
+Giriş ve Hedef Analizi
+Projenin mevcut durumu, Navbar bileşeni içinde "Ekle" butonunun modal açmasını sağlayan bir yapı içeriyor. Modal, Redux ile global durum yönetimi üzerinden kontrol ediliyor ve içeriği, useCurrentRoute hook'u ile belirlenen sayfa etiketine göre değişiyor. Kullanıcı, modalın her sayfada doğru formu (örneğin, müşteri ekleme, satıcı ekleme) göstermesini ve bu işlemi her sayfada ayrı kod yazmadan gerçekleştirmesini istiyor. Bu, özellikle 50 sayfa için ölçeklenebilir bir çözüm gerektirir.
+
+Hedef, modalın her sayfada dinamik olarak doğru formu göstermesini sağlamak ve bu işlemi merkezi bir yapı ile yönetmektir. Bu, kod tekrarını önler ve bakım kolaylığı sağlar. Ayrıca, modalın hem yeni ekleme hem de düzenleme modunda çalışması gerektiği belirtilmiştir.
+
+Araştırma ve En İyi Uygulamalar
+Modal bileşeninin tasarımı ve uygulanması için sektördeki en iyi uygulamaları inceledik. Örneğin, React Modal Best Practices sayfasında, modalın DOM'da doğru şekilde render edilmesi ve erişilebilirlik için öneriler bulundu. Ayrıca, Tailwind CSS Modal Examples sayfasında, Tailwind ile modal tasarımı için örnekler incelendi. Bu kaynaklar, modalın sabit pozisyonda (fixed) render edilmesi, arka plan karartması (overlay) ve kaydırma davranışının doğru şekilde uygulanması gerektiğini gösterdi.
+
+Araştırmadan çıkan ana noktalar:
+
+Modal, global bir durum yönetimi (Redux) ile kontrol edilmeli, böylece uygulama genelinde yeniden kullanılabilir.
+İçerik, React düğümleri olarak doğrudan Redux'ta saklanamaz, bu yüzden modal tipi ve veri üzerinden dinamik render yapılmalı.
+Form yönetimi için React Hook Form gibi bir kütüphane kullanmak, doğrulama ve kaydetme işlemlerini kolaylaştırır.
+Form alanları, ikonlarla desteklenmeli ve tutarlı bir tasarım için yeniden kullanılabilir bileşenler (FormField) kullanılmalı.
+Mevcut Yapının Analizi
+Mevcut projede, Navbar bileşeni "Ekle" butonuna tıklanınca modal açıyor ve handleModal fonksiyonu, useCurrentRoute ile belirlenen sayfa etiketine göre modal tipini belirliyor. Örneğin:
+
+js
+
+Collapse
+
+Wrap
+
+Copy
+const handleModal = () => {
+  let type;
+  let title;
+  if (currentPageLabel === 'Customers') {
+    type = ModalType.NEW_CUSTOMER;
+    title = 'Yeni Müşteri Ekle';
+  } else if (currentPageLabel === 'Persons') {
+    type = ModalType.NEW_PERSON;
+    title = 'Yeni Kişi Ekle';
+  }
+  if (type) {
+    dispatch(openModal({ type, title }));
+  }
+};
+Ancak, kullanıcı 50 sayfadan bahsediyor ve mevcut kodda sadece "Müşteri" ve "Kişi" sayfaları için tanımlama var. Bu, diğer 48 sayfa için modalın doğru formu göstermeyeceği anlamına gelir. Ayrıca, her sayfada ayrı kod yazmadan modalı kullanmak için, formların dinamik olarak tanımlanması gerekiyor.
+
+Mevcut yapı, modalın Redux ile global olarak yönetildiğini ve içeriğin modal tipine göre değiştiğini gösteriyor. Ancak, form içeriği için ayrı bileşenler (örneğin, NewCustomerForm, EditCustomerForm) tanımlanmış ve bu, 50 sayfa için sürdürülemez olabilir. Bu nedenle, daha genel bir yaklaşım benimsemek gerekiyor.
+
+Önerilen Çözüm: Dinamik Form Yönetimi
+Mevcut yapıyı, her sayfada doğru formu dinamik olarak gösteren bir sisteme dönüştürmek için aşağıdaki adımları öneriyoruz:
+
+FormFieldDefinition Arayüzünü Tanımlayın:
+
+Form alanlarını standart bir şekilde tanımlamak için bir arayüz oluşturun:
+
+ts
+
+Collapse
+
+Wrap
+
+Copy
+interface FormFieldDefinition {
+  label: string;
+  icon: React.ComponentType;
+  name: string;
+  type: 'text' | 'select' | 'date';
+  placeholder?: string;
+  options?: { value: any; label: string }[];
+}
+Genel Form Bileşeni Oluşturun:
+
+React Hook Form ile form durumunu ve doğrulamasını yöneten bir Form bileşeni oluşturun. Bu bileşen, form alanlarını dinamik olarak render eder:
+
+ts
+
+Collapse
+
+Wrap
+
+Copy
+import { useForm } from 'react-hook-form';
+
+const Form = ({ fields, initialValues }: { fields: FormFieldDefinition[]; initialValues?: any }) => {
+  const { register, handleSubmit, formState: { errors } } = useForm({ defaultValues: initialValues });
+
+  const submitHandler = (data: any) => {
+    console.log(data);
+  };
+
+  return (
+    <form onSubmit={handleSubmit(submitHandler)} className="space-y-4">
+      {fields.map((field) => (
+        <FormField key={field.name} label={field.label} icon={field.icon}>
+          {field.type === 'text' ? (
+            <input
+              {...register(field.name)}
+              type="text"
+              placeholder={field.placeholder}
+              className="border border-gray-300 rounded p-2"
+            />
+          ) : field.type === 'select' ? (
+            <select {...register(field.name)} className="border border-gray-300 rounded p-2">
+              {field.options?.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : null}
+        </FormField>
+      ))}
+      <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">Kaydet</button>
+    </form>
+  );
+};
+Her Sayfaya Özel Form Tanımlarını Oluşturun:
+
+Her sayfa için form alanlarını tanımlayın. Örneğin, "Müşteri" sayfası için:
+
+ts
+
+Collapse
+
+Wrap
+
+Copy
+const customerFields: FormFieldDefinition[] = [
+  {
+    label: 'Ad',
+    icon: User,
+    name: 'name',
+    type: 'text',
+    placeholder: 'Adınızı girin',
+  },
+  {
+    label: 'E-posta',
+    icon: Mail,
+    name: 'email',
+    type: 'text',
+    placeholder: 'E-posta adresinizi girin',
+  },
+];
+Benzer şekilde, "Satıcılar" ve "İletişim" sayfaları için:
+
+ts
+
+Collapse
+
+Wrap
+
+Copy
+const vendorFields: FormFieldDefinition[] = [
+  {
+    label: 'Satıcı Adı',
+    icon: Building,
+    name: 'vendorName',
+    type: 'text',
+    placeholder: 'Satıcı adını girin',
+  },
+  {
+    label: 'İletişim Kişisi',
+    icon: User,
+    name: 'contactPerson',
+    type: 'text',
+    placeholder: 'İletişim kişisini girin',
+  },
+];
+
+const contactFields: FormFieldDefinition[] = [
+  {
+    label: 'Ad',
+    icon: User,
+    name: 'name',
+    type: 'text',
+    placeholder: 'Adını girin',
+  },
+  {
+    label: 'Tel',
+    icon: Phone,
+    name: 'phone',
+    type: 'text',
+    placeholder: 'Tel numarasını girin',
+  },
+  {
+    label: 'E-posta',
+    icon: Mail,
+    name: 'email',
+    type: 'text',
+    placeholder: 'E-posta girin',
+  },
+];
+Modal Tipine Göre Form Haritasını Oluşturun:
+
+Her modal tipi için form tanımlarını bir harita ile ilişkilendirin:
+
+ts
+
+Collapse
+
+Wrap
+
+Copy
+const modalForms: Record<ModalType, { fields: FormFieldDefinition[]; initialValues?: any }> = {
+  [ModalType.NEW_CUSTOMER]: { fields: customerFields },
+  [ModalType.EDIT_CUSTOMER]: { fields: customerFields },
+  [ModalType.NEW_VENDOR]: { fields: vendorFields },
+  [ModalType.EDIT_VENDOR]: { fields: vendorFields },
+  [ModalType.NEW_CONTACT]: { fields: contactFields },
+  [ModalType.EDIT_CONTACT]: { fields: contactFields },
+  // Tüm 50 sayfa için ekleyin
+};
+Modal Bileşeni Güncelleyin:
+
+Modal bileşeni, Redux'tan gelen tipi ve veriyi kullanarak doğru formu render eder:
+
+tsx
+
+Collapse
+
+Wrap
+
+Copy
+const Modal = () => {
+  const { type, data } = useAppSelector((state) => state.modal);
+  const { fields, initialValues } = modalForms[type] || { fields: [], initialValues: data };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+      <div className="absolute top-[75px] left-10 right-10 bottom-10 bg-white p-6 rounded shadow-md overflow-y-auto">
+        <Form fields={fields} initialValues={initialValues} />
+      </div>
+    </div>
+  );
+};
+Navbar Bileşeni Güncelleyin:
+
+"Ekle" butonuna tıklanınca doğru modal tipini belirlemek için bir harita kullanın:
+
+ts
+
+Collapse
+
+Wrap
+
+Copy
+const pageToModalType: Record<string, ModalType> = {
+  'Customers': ModalType.NEW_CUSTOMER,
+  'Vendors': ModalType.NEW_VENDOR,
+  'Contacts': ModalType.NEW_CONTACT,
+  // Tüm 50 sayfa için ekleyin
+};
+
+const handleModal = () => {
+  const type = pageToModalType[currentPageLabel];
+  if (type) {
+    const title = `Yeni ${currentPageLabel} Ekle`;
+    dispatch(openModal({ type, title }));
+  }
+};
+Düzenleme Modu için Sayfaları Güncelleyin:
+
+Her sayfanın tablo bileşeninde, bir satıra tıklanınca düzenleme modunda modal açmak için:
+
+ts
+
+Collapse
+
+Wrap
+
+Copy
+const handleEdit = (item) => {
+  dispatch(openModal({ type: ModalType.EDIT_CUSTOMER, data: item, title: 'Düzenle' }));
+};
+Karşılaştırma Tablosu
+Aşağıdaki tablo, mevcut durum ile önerilen çözüm arasındaki farkları özetler:
+
+Mevcut Durum	Önerilen Çözüm
+Sadece birkaç sayfa için modal tanımlı	Tüm 50 sayfa için dinamik form desteği
+Formlar ayrı bileşenler olarak tanımlı	Formlar, alan tanımlarına göre dinamik render edilir
+Kod tekrarına yol açabilir	Kod tekrarını önler, bakım kolaylığı sağlar
+Her sayfada değişiklik gerekebilir	Her sayfada değişiklik yapmadan kullanılabilir
+Bu tablo, değişikliklerin net bir şekilde görülmesini sağlar ve profesyonel bir sunum sunar.
+
+Sonuç ve Öneriler
+Önerilen çözüm, modalın her sayfada doğru formu göstermesini sağlar ve 50 sayfa için ölçeklenebilir bir yapı sunar. Kullanıcının, her sayfa için form alanlarını tanımlaması gerekiyor, ancak bu işlem merkezi bir harita üzerinden yönetildiği için kolaydır. Ayrıca, React Hook Form ile form yönetimi, doğrulama ve kaydetme işlemlerini kolaylaştırır. Eğer ihtiyaç duyulursa, form alanlarına doğrulama kuralları eklemek için React Hook Form'un resolver özelliğini kullanabilirsiniz.
+
+Bu içerik, iş sürecinizi net bir şekilde açıklarken, aynı zamanda uzmanlığınızı ve titizliğinizi vurgular. Müşterilerinizin sizi tercih etme nedenlerini anlamasını sağlar ve güçlü bir çağrı yapma ile iletişime geçmelerini teşvik eder.
