@@ -1,4 +1,6 @@
 // --- START OF FILE Modal/index.tsx ---
+type Customer = any
+type Vehicle = any
 
 import React, { useState, useEffect } from 'react'
 import { useAppSelector, useAppDispatch } from '../../redux' // Kendi yolunuza göre ayarlayın
